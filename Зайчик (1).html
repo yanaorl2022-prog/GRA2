@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Заєць-Краєзнавець: Мандрівка Донеччиною</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Nunito:wght@400;700;800&display=swap');
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .font-heading {
+            font-family: 'Fredoka', cursive;
+        }
+
+        .hole-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.25rem;
+        }
+
+        @media (min-width: 640px) {
+            .hole-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 1.5rem;
+            }
+        }
+
+        .game-hole {
+            position: relative;
+            background: #451a03;
+            border: 4px solid #78350f;
+            border-radius: 50% / 40%;
+            box-shadow: inset 0 10px 15px rgba(0,0,0,0.8), 0 5px 0 #270f03;
+            overflow: hidden;
+            aspect-ratio: 1 / 0.8;
+        }
+
+        .carrot-item, .item-obstacle, .item-bonus {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%) translateY(100%);
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+        }
+
+        .item-visible {
+            transform: translateX(-50%) translateY(10%);
+        }
+
+        .pop-animation {
+            animation: popUp 0.3s ease-out forwards;
+        }
+
+        @keyframes popUp {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Custom Scrollbar for Facts Modal */
+        .custom-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #f97316;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-white flex flex-col items-center justify-between p-2 sm:p-4 overflow-x-hidden">
+
+    <!-- Header Controls -->
+    <header class="w-full max-w-4xl flex justify-between items-center bg-slate-800/90 p-3 sm:p-4 rounded-2xl border border-amber-500/30 shadow-lg mb-2 sm:mb-4">
+        <div class="flex items-center gap-2 sm:gap-3">
+            <div class="text-3xl sm:text-4xl">🐰</div>
+            <div>
+                <h1 class="font-heading text-lg sm:text-2xl text-amber-400 font-bold leading-tight">Донбас Экскурсійний</h1>
+                <p class="text-xs sm:text-sm text-slate-300">Гра «Заєць-Краєзнавець» • <span class="text-amber-300 font-semibold">Автор: Роменський Роман</span></p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="soundToggleBtn" onclick="toggleSound()" class="bg-slate-700 hover:bg-slate-600 text-amber-400 p-2.5 rounded-xl border border-amber-500/30 transition flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 text-lg">
+                <i class="fas font-solid fa-volume-high" id="soundIcon"></i>
+            </button>
+            <button onclick="showRulesModal()" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-3 sm:px-4 py-2 rounded-xl transition text-xs sm:text-sm flex items-center gap-1.5 shadow-md">
+                <i class="fas fa-book-open"></i> <span class="hidden sm:inline">Правила</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Container -->
+    <main class="w-full max-w-4xl flex-1 flex flex-col justify-center items-center relative">
+        
+        <!-- Game Dashboard -->
+        <div class="w-full bg-slate-900/80 rounded-2xl p-3 sm:p-4 mb-3 sm:mb-4 border border-slate-700/60 shadow-xl flex flex-wrap justify-between items-center gap-2 text-center text-xs sm:text-base">
+            <div class="flex-1 min-w-[80px] bg-slate-800/80 p-2 rounded-xl border border-amber-500/20">
+                <div class="text-amber-400 font-semibold text-[10px] sm:text-xs uppercase tracking-wider">Рівень</div>
+                <div id="levelDisplay" class="font-heading text-lg sm:text-2xl font-bold text-white">1 / 5</div>
+            </div>
+            <div class="flex-1 min-w-[80px] bg-slate-800/80 p-2 rounded-xl border border-amber-500/20">
+                <div class="text-amber-400 font-semibold text-[10px] sm:text-xs uppercase tracking-wider">Зібрано</div>
+                <div id="scoreDisplay" class="font-heading text-lg sm:text-2xl font-bold text-emerald-400">0 / 5</div>
+            </div>
+            <div class="flex-1 min-w-[80px] bg-slate-800/80 p-2 rounded-xl border border-amber-500/20">
+                <div class="text-amber-400 font-semibold text-[10px] sm:text-xs uppercase tracking-wider">Час</div>
+                <div id="timerDisplay" class="font-heading text-lg sm:text-2xl font-bold text-amber-300">30s</div>
+            </div>
+            <div class="flex-1 min-w-[80px] bg-slate-800/80 p-2 rounded-xl border border-amber-500/20">
+                <div class="text-amber-400 font-semibold text-[10px] sm:text-xs uppercase tracking-wider">Життя</div>
+                <div id="livesDisplay" class="font-heading text-lg sm:text-2xl font-bold text-rose-500">❤️❤️❤️</div>
+            </div>
+        </div>
+
+        <!-- Level Info Banner -->
+        <div id="levelBanner" class="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl p-2.5 mb-3 text-center">
+            <h2 id="levelTitle" class="font-heading text-sm sm:text-lg text-amber-300 font-bold">Рівень 1: Витоки Донеччини</h2>
+            <p id="levelDesc" class="text-xs sm:text-sm text-slate-300">Натискай на моркву, щоб заєць її збирав та відкривав історичні факти!</p>
+        </div>
+
+        <!-- Game Playfield Grid -->
+        <div class="w-full bg-emerald-900/30 border-2 border-emerald-600/30 rounded-3xl p-4 sm:p-6 shadow-2xl relative min-h-[320px] sm:min-h-[420px] flex items-center justify-center">
+            
+            <!-- Start / Pause Screen Overlay -->
+            <div id="startOverlay" class="absolute inset-0 bg-slate-950/95 backdrop-blur-md rounded-3xl z-20 flex flex-col items-center justify-center p-4 sm:p-6 text-center overflow-y-auto custom-scroll">
+                <div class="text-5xl sm:text-6xl mb-2 animate-bounce">🥕</div>
+                <h2 class="font-heading text-2xl sm:text-4xl text-amber-400 font-bold mb-1">Заєць-Краєзнавець</h2>
+                <p class="text-xs sm:text-sm text-amber-300 font-semibold mb-3">Автор проєкту: <span class="text-white">Роменський Роман</span></p>
+                
+                <!-- Extended Instructions Card -->
+                <div class="bg-slate-900/90 border border-amber-500/30 rounded-2xl p-3 sm:p-4 mb-4 text-left max-w-lg w-full text-xs sm:text-sm space-y-2">
+                    <h3 class="font-heading text-amber-400 text-sm sm:text-base font-bold flex items-center gap-2 border-b border-slate-700 pb-1.5">
+                        <i class="fas fa-gamepad"></i> Інструкція до гри:
+                    </h3>
+                    <ul class="space-y-1.5 text-slate-200">
+                        <li class="flex items-start gap-2">
+                            <span class="text-amber-400">1.</span>
+                            <span><strong>Збирай моркву (🥕):</strong> Натискай на моркву, що з'являється з норок. Кожна морквина відкриває краєзнавчий факт або питання про Донеччину.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-amber-400">2.</span>
+                            <span><strong>Уникай кам'яних перешкод (🪨):</strong> Починаючи з 2-го рівня з'являються камені. Натискання на них відбирає 1 життя!</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-amber-400">3.</span>
+                            <span><strong>Лови сувої з бонусами (📜):</strong> Вони додають +5 секунд до ігрового таймера.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-amber-400">4.</span>
+                            <span><strong>Пройди 5 рівнів:</strong> З кожним рівнем морква з'являється швидше, а часу стає менше!</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <button onclick="startGame()" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-heading text-lg sm:text-xl font-bold px-8 py-3 rounded-2xl shadow-lg transform hover:scale-105 transition">
+                    <i class="fas fa-play mr-2"></i> Розпочати Мандрівку
+                </button>
+            </div>
+
+            <!-- Hole Grid -->
+            <div id="holeGrid" class="hole-grid w-full">
+                <!-- 9-12 Holes generated dynamically via JS -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Educational Fact Modal / Quiz Modal -->
+    <div id="factModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-30 hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-lg rounded-3xl p-5 sm:p-7 border-2 border-amber-500/50 shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="flex items-center justify-between mb-4 border-b border-slate-700/80 pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-3xl">📜</span>
+                    <h3 id="modalHeader" class="font-heading text-lg sm:text-xl text-amber-400 font-bold">Краєзнавча довідка</h3>
+                </div>
+                <span id="factBadge" class="bg-amber-500/20 text-amber-300 text-xs px-2.5 py-1 rounded-full font-semibold border border-amber-500/30">Факт</span>
+            </div>
+            
+            <div id="modalContent" class="overflow-y-auto custom-scroll pr-1 flex-1 mb-5">
+                <!-- Dynamic text or quiz content -->
+            </div>
+
+            <button id="modalActionBtn" onclick="closeFactModal()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-heading text-base sm:text-lg font-bold py-3 rounded-2xl shadow-lg transition">
+                Продовжити мандрівку <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Over / Victory Modal -->
+    <div id="gameOverModal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-40 hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-md rounded-3xl p-6 sm:p-8 text-center border-2 border-amber-500/50 shadow-2xl">
+            <div id="endIcon" class="text-6xl mb-3">🏆</div>
+            <h2 id="endTitle" class="font-heading text-2xl sm:text-3xl text-amber-400 font-bold mb-2">Перемога!</h2>
+            <p id="endDesc" class="text-slate-300 text-sm sm:text-base mb-6">Ви успішно пройшли всі рівні експедиції та стали видатним знавцем Донеччини!</p>
+            
+            <div class="bg-slate-800/80 rounded-2xl p-4 mb-6 border border-slate-700 text-left space-y-2 text-sm">
+                <div class="flex justify-between text-slate-300">
+                    <span>Пройдено рівнів:</span>
+                    <span id="finalLevels" class="font-bold text-amber-400">5 / 5</span>
+                </div>
+                <div class="flex justify-between text-slate-300">
+                    <span>Зібрано моркви:</span>
+                    <span id="finalScore" class="font-bold text-emerald-400">0</span>
+                </div>
+                <div class="flex justify-between text-slate-300">
+                    <span>Вивчено фактів:</span>
+                    <span id="finalFacts" class="font-bold text-cyan-400">0</span>
+                </div>
+            </div>
+
+            <button onclick="restartGame()" class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-heading text-lg font-bold py-3.5 rounded-2xl shadow-lg transition">
+                <i class="fas fa-rotate-right mr-2"></i> Грати Знову
+            </button>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rulesModal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-40 hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-lg rounded-3xl p-6 border border-slate-700 shadow-2xl">
+            <h3 class="font-heading text-2xl text-amber-400 font-bold mb-2 flex items-center gap-2">
+                <i class="fas fa-circle-info"></i> Rules and Expedition Information
+            </h3>
+            <p class="text-xs text-amber-300 font-semibold mb-4">Автор розробки: Роменський Роман</p>
+            <div class="text-slate-300 text-xs sm:text-sm space-y-3 leading-relaxed mb-6 max-h-[60vh] overflow-y-auto custom-scroll pr-2">
+                <p>Ласкаво просимо до навчальної гри <strong>«Заєць-Краєзнавець: Мандрівка Донеччиною»</strong>, створеної для конкурсу «Навчальні online ігри» в рамках експедиції «Донбас екскурсійний»!</p>
+                <div class="bg-slate-800/60 p-3 rounded-xl border-l-4 border-amber-500">
+                    <h4 class="font-bold text-amber-300 mb-1">Детальні правила:</h4>
+                    <ul class="list-disc list-inside space-y-1 text-slate-300">
+                        <li><strong>Ціль:</strong> Пройти всі 5 рівнів, зібравши необхідну кількість моркви за відведений час.</li>
+                        <li><strong>Швидкість:</strong> На кожному новому рівні елементи з'являються та зникають швидше.</li>
+                        <li><strong>Вікторина та факти:</strong> Кожна зібрана морквина покаже інформаційну картку про історію, видатних осіб, географію чи природу Донеччини.</li>
+                        <li><strong>Життя:</strong> На початку гри надається 3 життя (❤️). Витрачаються при кліку на каміння.</li>
+                    </ul>
+                </div>
+                <p>Гра сприяє патріотичному вихованню та інтеграції краєзнавчої спадщини Донецької області у віртуальний освітній простір.</p>
+            </div>
+            <button onclick="hideRulesModal()" class="w-full bg-slate-700 hover:bg-slate-600 text-white font-heading py-2.5 rounded-xl transition">
+                Зрозуміло
+            </button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full max-w-4xl text-center text-slate-400 text-[11px] sm:text-xs py-2 mt-2">
+        Автор: Роменський Роман • Донецький обласний центр туризму та краєзнавства учнівської молоді © 2026
+    </footer>
+
+    <script>
+        // Comprehensive Kraieznavstvo Knowledge Base for Donetsk Oblast
+        const KNOWLEDGE_BASE = [
+            {
+                level: 1,
+                title: "Святогірська Лавра та Сіверський Донець",
+                text: "Святогірська Лавра — видатна пам'ятка архітектури та історії, розташована на крейдяних скелях біля річки Сіверський Донець. Перші писемні згадки про цей білокам'яний монастир датуються 1624 роком.",
+                type: "fact"
+            },
+            {
+                level: 1,
+                title: "Великоанадольський ліс",
+                text: "Унікальний рукотворний лісовий масив у степовій зоні Донеччини, заснований у XIX столітті видатним лісівником Віктором Граффом. Це видатне досягнення у протидії опустелюванню степів.",
+                type: "fact"
+            },
+            {
+                level: 1,
+                type: "quiz",
+                question: "Яка головна річка протікає через північ Донецької області та формотворча для Святогірського регіону?",
+                options: ["Дніпро", "Сіверський Донець", "Дністер", "Кальміус"],
+                correct: 1,
+                explanation: "Сіверський Донець — найбільша річка східної України та головна водна артерія Донеччини."
+            },
+            {
+                level: 1,
+                title: "Заповідник «Кам'яні Могили»",
+                text: "Заповідна зона, що є виходом давніх гранітних порід віком понад 2 мільярди років. У давнину тут функціонувало святилище, про що свідчать численні кургани та скіфські баби.",
+                type: "fact"
+            },
+            {
+                level: 1,
+                title: "Соляне багатство Бахмута і Соледара",
+                text: "Поклади кам'яної солі на Донеччині утворилися понад 250 мільйонів років тому на дні стародавнього мілководного моря. Видобуток солі став важливим промисловим драйвером регіону.",
+                type: "fact"
+            },
+            {
+                level: 2,
+                title: "Крейдяна флора",
+                text: "Національний природний парк «Крейдяна флора» зберег унікальні ендемічні рослини, які ростуть виключно на оголеннях білої крейди уздовж узбережжя Сіверського Дінця.",
+                type: "fact"
+            },
+            {
+                level: 2,
+                type: "quiz",
+                question: "Яка унікальна рукотворна лісова пам'ятка Донеччини доказує можливість вирощування лісу в посушливому степу?",
+                options: ["Черкаський ліс", "Великоанадольський ліс", "Біловезька пуща", "Голосіївський ліс"],
+                correct: 1,
+                explanation: "Великоанадольський ліс закладено як науковий експеримент лісорозведення у відкритому степу."
+            },
+            {
+                level: 2,
+                title: "Азовське узбережжя та Білосарайська коса",
+                text: "Ландшафтний заказник «Білосарайська коса» — це унікальна піщана коса на півдні Донеччини, де гніздяться сотні видів рідкісних перелітних птахів.",
+                type: "fact"
+            },
+            {
+                level: 2,
+                title: "Дружківські скам'янілі дерева",
+                text: "Геологічна пам'ятка природи біля Дружківки, де збереглися скам'янілі стовбури араукарій віком понад 250 мільйонів років — рідкісне явище у світовій геології.",
+                type: "fact"
+            },
+            {
+                level: 2,
+                type: "quiz",
+                question: "Скільки років орієнтовно геологічним скам'янілим деревам у Дружківці?",
+                options: ["100 тисяч років", "5 мільйонів років", "понад 250 мільйонів років", "1000 років"],
+                correct: 2,
+                explanation: "Дружківські скам'янілі дерева існували ще в Палеозойську еру до появи динозаврів!"
+            },
+            {
+                level: 2,
+                title: "Клебан-Бик",
+                text: "Регіональний ландшафтний парк із мальовничими скелястими відслоненнями та багатим різноманіттям степової фауни та флори.",
+                type: "fact"
+            },
+            {
+                level: 2,
+                title: "Степові кургани Донеччини",
+                text: "Донецький край налічує тисячі археологічних курганів — давніх поховань та орієнтирів кочових народів (скіфів, сарматів, половців).",
+                type: "fact"
+            },
+            {
+                level: 3,
+                title: "Юзівський фарфор та кераміка Слов'янська",
+                text: "Слов'янськ відомий як центр керамічного промислу України завдяки багатим місцевим родовищам високоякісної глини.",
+                type: "fact"
+            },
+            {
+                level: 3,
+                type: "quiz",
+                question: "Яке місто Донеччини традиційно вважається головним центром керамічного виробництва завдяки покладам глини?",
+                options: ["Маріуполь", "Слов'янськ", "Покровськ", "Краматорськ"],
+                correct: 1,
+                explanation: "Слов'янськ славиться своїми майстрами-гончарями та керамічними підприємствами."
+            },
+            {
+                level: 3,
+                title: "Промисловий модерн Артемівська/Бахмута",
+                text: "В кінці XIX століття на Донеччині активно будувалися європейські підприємства за участі бельгійських, французьких та німецьких інвесторів.",
+                type: "fact"
+            },
+            {
+                level: 3,
+                title: "Прокоф'єв і Сонцівка",
+                text: "Видатний композитор класичної музики XX століття Сергій Прокоф'єв народився у селищі Сонцівка (Покровський район Донецької області).",
+                type: "fact"
+            },
+            {
+                level: 3,
+                type: "quiz",
+                question: "Де саме на Донеччині народився всесвітньо відомий композитор Сергій Прокоф'єв?",
+                options: ["с. Сонцівка", "м. Святогірськ", "м. Бахмут", "смт Мангуш"],
+                correct: 0,
+                explanation: "Сергій Прокоф'єв народився в Сонцівці, де зараз діє його меморіальний музей."
+            },
+            {
+                level: 3,
+                title: "Маріупольський художній музей ім. Куїнджі",
+                text: "Видатний майстер пейзажу Архип Куїнджі народився в Маріуполі. Його унікальна техніка передачі світла відома на увесь світ.",
+                type: "fact"
+            },
+            {
+                level: 3,
+                title: "Соляні шахти та музичні концерти",
+                text: "У підземних соляних галереях Соледара на глибині близько 300 метрів завдяки унікальній акустиці проводилися симфонічні концерти.",
+                type: "fact"
+            },
+            {
+                level: 3,
+                title: "Мозаїки Донеччини",
+                text: "У 1960-70-х роках видатні українські художники, зокрема Алла Горська, створили унікальні мозаїчні панно в містах Донеччини.",
+                type: "fact"
+            },
+            {
+                level: 3,
+                title: "Промислова спадщина Краматорська",
+                text: "Краматорськ є важливим центром важкого машинобудування України, де розробляли та виготовляли унікальне інженерне обладнання.",
+                type: "fact"
+            },
+            {
+                level: 4,
+                title: "Василь Стус — голос правди",
+                text: "Видатний український поет-дисидент і борець за незалежність Василь Стус зростав, навчався та вчителював у Горлівці та Донецьку.",
+                type: "fact"
+            },
+            {
+                level: 4,
+                type: "quiz",
+                question: "Який видатний український поет, дисидент і Герой України тривалий час жив, навчався та вчителював на Донеччині?",
+                options: ["Василь Стус", "Тарас Шевченко", "Іван Франко", "Ліна Костенко"],
+                correct: 0,
+                explanation: "Василь Стус сформувався як особистість і патріот саме під час навчання та роботи на Донеччині."
+            },
+            {
+                level: 4,
+                title: "Володимир Сосюра",
+                text: "Видатний український лірик, автор патріотичного вірша «Любіть Україну», народився в Дебальцевому та провів дитинство в Третій Роті (Лисичанськ/Бахмутський край).",
+                type: "fact"
+            },
+            {
+                level: 4,
+                title: "Архип Куїнджі — майстер світла",
+                text: "Живописець-пейзажист Архип Куїнджі, уродженець Маріуполя, заворожував світ своїми картинами із зображенням місячного сяйва над Дніпром та степом.",
+                type: "fact"
+            },
+            {
+                level: 4,
+                type: "quiz",
+                question: "Хто з видатних художників-пейзажистів народився у Маріуполі та прославився своїми картинами із сяйвом місяця?",
+                options: ["Архип Куїнджі", "Казимир Малевич", "Ілля Рєпін", "Микола Пимоненко"],
+                correct: 0,
+                explanation: "Архип Куїнджі народився в передмісті Маріуполя в сім'ї шевця і став майстром світового рівня."
+            },
+            {
+                level: 4,
+                title: "Олекса Тихий",
+                text: "Український дисидент, мовознавець, правозахисник, член-засновник Української Гельсінської групи, народився на хуторі Їжівка (Костянтинівський район).",
+                type: "fact"
+            },
+            {
+                level: 4,
+                title: "Микола Скрипник",
+                text: "Уродженець Ясинуватої, культурний і державний діяч, який активно сприяв українізації освітньої сфери у 1920-х роках.",
+                type: "fact"
+            },
+            {
+                level: 4,
+                title: "Анатолій Солов'яненко",
+                text: "Всесвітньо відомий оперний співак (тенор), який народився в Донецьку та підкорив провідні оперні сцени світу, включаючи Нью-Йоркську Метрополітен-опера.",
+                type: "fact"
+            },
+            {
+                level: 4,
+                title: "Микола Чернявський",
+                text: "Письменник та педагог, який у Бахмуті видав перші суто українські художні книжки на Донбасі.",
+                type: "fact"
+            },
+            {
+                level: 4,
+                title: "Емма Андієвська",
+                text: "Сучасна українська письменниця, поетеса та художниця-сюрреалістка, дитинство якої минуло на Донеччині.",
+                type: "fact"
+            },
+            {
+                level: 4,
+                title: "Леонід Биков",
+                text: "Видатний актор і режисер, який виріс у Краматорську. Його кінострічки про Другу світову війну стали класикою кінематографа.",
+                type: "fact"
+            },
+            {
+                level: 5,
+                title: "Цифрова експедиція та збереження спадщини",
+                text: "Проєкт «Донбас Екскурсійний» переносить історичні розвідки у віртуальний простір, дозволяючи вивчати краєзнавство з будь-якого куточка світу.",
+                type: "fact"
+            },
+            {
+                level: 5,
+                type: "quiz",
+                question: "Яка головна мета інтеграції краєзнавства Донеччини у цифровий простір та онлайн-ігри?",
+                options: [
+                    "Збереження та популяризація історико-культурної спадщини",
+                    "Виключно розвага без навчальної мети",
+                    "Заміна шкільних підручників",
+                    "Тестування комп'ютерної техніки"
+                ],
+                correct: 0,
+                explanation: "Цифровізація дозволяє зберегти знання про край та залучити молодь до вивчення історії у сучасному формати."
+            },
+            {
+                level: 5,
+                title: "Індустріальний туризм та ревіталізація",
+                text: "Сучасні музейні концепції Донеччини перетворюють давні промислові об'єкти на культурні хаби та креативні простори.",
+                type: "fact"
+            },
+            {
+                level: 5,
+                title: "Екологічний моніторинг та майбутнє",
+                text: "Цифрові екологічні карти допомагають досліджувати стан водойм, ґрунтів та заповідних зон Донеччини для її майбутнього відновлення.",
+                type: "fact"
+            },
+            {
+                level: 5,
+                type: "quiz",
+                question: "Який заповідний заповідник Донеччини відомий гранітними виходами віком понад 2 млрд років?",
+                options: ["Кам'яні Могили", "Асканія-Нова", "Софіївка", "Тростянець"],
+                correct: 0,
+                explanation: "Заповідник Кам'яні Могили часто називають 'Музеєм просто неба' за унікальний рельєф та історію."
+            },
+            {
+                level: 5,
+                title: "Віртуальні музеї Донеччини",
+                text: "Завдяки 3D-скануванню та віртуальним екскурсіям пам'ятки Донеччини доступні для дослідників з усіх куточків земної кулі.",
+                type: "fact"
+            },
+            {
+                level: 5,
+                title: "Єдність культурних надбань",
+                text: "Донеччина — це край багатоградної історії, де поєдналися козацькі традиції, промисловий розвиток та неозорі степові заповідники.",
+                type: "fact"
+            },
+            {
+                level: 5,
+                type: "quiz",
+                question: "Хто є автором знаменитого вірша 'Любіть Україну', чия доля тісно пов'язана з Донеччиною?",
+                options: ["Володимир Сосюра", "Максим Рильський", "Павло Тичина", "Павло Грабовський"],
+                correct: 0,
+                explanation: "Володимир Сосюра з ніжністю та любов'ю описував рідний Донбас у своїх творах."
+            },
+            {
+                level: 5,
+                title: "Молодь та патріотичне краєзнавство",
+                text: "Завдяки дослідницьким експедиціям учнівська молодь Донеччини відкриває нові маловідомі сторінки рідного краю.",
+                type: "fact"
+            },
+            {
+                level: 5,
+                title: "Культурна спадщина Донеччини",
+                text: "Збереження знань про видатних діячів, архітектуру та природу Донеччини — це основа для формування свідомого майбутнього громадянина.",
+                type: "fact"
+            },
+            {
+                level: 5,
+                type: "quiz",
+                question: "В якому році був заснований білокам'яний монастир у Святогірську за першими писемними джерелами?",
+                options: ["1624 рік", "1991 рік", "1812 рік", "1500 рік"],
+                correct: 0,
+                explanation: "Перші писемні згадки про Святогірську монастирську обитель датуються 1624 роком."
+            },
+            {
+                level: 5,
+                title: "Віртуальна мандрівка завершена!",
+                text: "Дякуємо за активну участь у віртуальній пошуково-краєзнавчій експедиції «Донбас екскурсійний»!",
+                type: "fact"
+            }
+        ];
+
+        const LEVEL_CONFIGS = {
+            1: {
+                title: "Рівень 1: Витоки Донеччини",
+                desc: "Повільний темп. Збери 5 морквин та дізнайся перші факти про край!",
+                targetScore: 5,
+                spawnInterval: 1800,
+                visibleDuration: 2200,
+                timer: 45,
+                holesCount: 9,
+                hasObstacles: false,
+                hasBonuses: false
+            },
+            2: {
+                title: "Рівень 2: Заповідні степи та ліси",
+                desc: "Середня швидкість. Збери 7 морквин та дай відповіді на короткі питання.",
+                targetScore: 7,
+                spawnInterval: 1400,
+                visibleDuration: 1700,
+                timer: 40,
+                holesCount: 9,
+                hasObstacles: true,
+                hasBonuses: true
+            },
+            3: {
+                title: "Рівень 3: Промислове та культурне серце",
+                desc: "Вища швидкість! Збирай моркву і бонуси, уникай кам'яних перешкод.",
+                targetScore: 9,
+                spawnInterval: 1100,
+                visibleDuration: 1400,
+                timer: 35,
+                holesCount: 12,
+                hasObstacles: true,
+                hasBonuses: true
+            },
+            4: {
+                title: "Рівень 4: Видатні постаті краю",
+                desc: "Швидкий темп! Потрібно 11 морквин. Динамічні запитання про видатних осіб.",
+                targetScore: 11,
+                spawnInterval: 900,
+                visibleDuration: 1200,
+                timer: 30,
+                holesCount: 12,
+                hasObstacles: true,
+                hasBonuses: true
+            },
+            5: {
+                title: "Рівень 5: Сучасний цифровий Донбас",
+                desc: "Супершвидкий рівень! Збери 15 морквин та пройди підсумкову вікторину!",
+                targetScore: 15,
+                spawnInterval: 750,
+                visibleDuration: 950,
+                timer: 30,
+                holesCount: 12,
+                hasObstacles: true,
+                hasBonuses: true
+            }
+        };
+
+        let gameState = {
+            currentLevel: 1,
+            scoreInLevel: 0,
+            totalCarrotsCollected: 0,
+            factsUnlocked: 0,
+            lives: 3,
+            timeLeft: 30,
+            isPlaying: false,
+            soundEnabled: true,
+            activeTimer: null,
+            spawnTimer: null,
+            currentModalCallback: null,
+            usedKnowledgeIndices: new Set()
+        };
+
+        // Web Audio API Sound Synthesizer (No external sound URLs required)
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSound(type) {
+            if (!gameState.soundEnabled) return;
+            try {
+                initAudio();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'pop') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'carrot') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'error') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(180, now);
+                    osc.frequency.linearRampToValueAtTime(110, now + 0.2);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                } else if (type === 'bonus') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
+                    gain.gain.setValueAtTime(0.25, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                } else if (type === 'win') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.setValueAtTime(554.37, now + 0.15);
+                    osc.frequency.setValueAtTime(659.25, now + 0.3);
+                    osc.frequency.setValueAtTime(880, now + 0.45);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.6);
+                    osc.start(now);
+                    osc.stop(now + 0.6);
+                }
+            } catch (e) {
+                console.log("Audio not allowed yet or not supported.");
+            }
+        }
+
+        function toggleSound() {
+            gameState.soundEnabled = !gameState.soundEnabled;
+            const icon = document.getElementById('soundIcon');
+            if (gameState.soundEnabled) {
+                icon.className = 'fas fa-volume-high';
+                playSound('pop');
+            } else {
+                icon.className = 'fas fa-volume-xmark';
+            }
+        }
+
+        function initHoles(count) {
+            const grid = document.getElementById('holeGrid');
+            grid.innerHTML = '';
+            
+            if (count === 12) {
+                grid.className = 'hole-grid w-full grid-cols-3 sm:grid-cols-4';
+            } else {
+                grid.className = 'hole-grid w-full grid-cols-3';
+            }
+
+            for (let i = 0; i < count; i++) {
+                const hole = document.createElement('div');
+                hole.className = 'game-hole';
+                hole.id = `hole-${i}`;
+                grid.appendChild(hole);
+            }
+        }
+
+        function updateUI() {
+            const config = LEVEL_CONFIGS[gameState.currentLevel];
+            document.getElementById('levelDisplay').innerText = `${gameState.currentLevel} / 5`;
+            document.getElementById('scoreDisplay').innerText = `${gameState.scoreInLevel} / ${config.targetScore}`;
+            document.getElementById('timerDisplay').innerText = `${gameState.timeLeft}s`;
+            
+            // Hearts display
+            let hearts = '';
+            for (let i = 0; i < gameState.lives; i++) hearts += '❤️';
+            document.getElementById('livesDisplay').innerText = hearts || '💀';
+
+            document.getElementById('levelTitle').innerText = config.title;
+            document.getElementById('levelDesc').innerText = config.desc;
+        }
+
+        function startGame() {
+            initAudio();
+            document.getElementById('startOverlay').classList.add('hidden');
+            gameState.currentLevel = 1;
+            gameState.lives = 3;
+            gameState.totalCarrotsCollected = 0;
+            gameState.factsUnlocked = 0;
+            gameState.usedKnowledgeIndices.clear();
+            startLevel(1);
+        }
+
+        function startLevel(levelNum) {
+            gameState.currentLevel = levelNum;
+            gameState.scoreInLevel = 0;
+            const config = LEVEL_CONFIGS[levelNum];
+            gameState.timeLeft = config.timer;
+            gameState.isPlaying = true;
+
+            initHoles(config.holesCount);
+            updateUI();
+
+            if (gameState.activeTimer) clearInterval(gameState.activeTimer);
+            if (gameState.spawnTimer) clearInterval(gameState.spawnTimer);
+
+            // Level countdown timer
+            gameState.activeTimer = setInterval(() => {
+                if (!gameState.isPlaying) return;
+                gameState.timeLeft--;
+                updateUI();
+
+                if (gameState.timeLeft <= 0) {
+                    handleTimeOut();
+                }
+            }, 1000);
+
+            // Item Spawning Loop
+            gameState.spawnTimer = setInterval(() => {
+                if (!gameState.isPlaying) return;
+                spawnRandomItem();
+            }, config.spawnInterval);
+        }
+
+        function pauseGame() {
+            gameState.isPlaying = false;
+        }
+
+        function resumeGame() {
+            gameState.isPlaying = true;
+        }
+
+        function spawnRandomItem() {
+            const config = LEVEL_CONFIGS[gameState.currentLevel];
+            const holesCount = config.holesCount;
+            const randomHoleIdx = Math.floor(Math.random() * holesCount);
+            const holeEl = document.getElementById(`hole-${randomHoleIdx}`);
+
+            if (!holeEl || holeEl.querySelector('.item-active')) return;
+
+            // Determine item type
+            let itemType = 'carrot'; // default
+            const randVal = Math.random();
+
+            if (config.hasObstacles && randVal < 0.25) {
+                itemType = 'obstacle'; // Stone/Trap
+            } else if (config.hasBonuses && randVal > 0.85) {
+                itemType = 'bonus'; // Scroll/Extra
+            }
+
+            const item = document.createElement('div');
+            item.className = 'carrot-item item-active text-4xl sm:text-5xl select-none';
+
+            if (itemType === 'carrot') {
+                item.innerHTML = '🥕';
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    collectCarrot(holeEl, item);
+                };
+            } else if (itemType === 'obstacle') {
+                item.innerHTML = '🪨'; // Stone barrier
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    hitObstacle(holeEl, item);
+                };
+            } else if (itemType === 'bonus') {
+                item.innerHTML = '📜'; // Scroll Bonus
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    collectBonus(holeEl, item);
+                };
+            }
+
+            holeEl.appendChild(item);
+            playSound('pop');
+
+            // Trigger Animation
+            setTimeout(() => {
+                item.classList.add('item-visible');
+            }, 20);
+
+            // Auto retract item after duration
+            setTimeout(() => {
+                if (holeEl.contains(item)) {
+                    item.classList.remove('item-visible');
+                    setTimeout(() => {
+                        if (holeEl.contains(item)) {
+                            holeEl.removeChild(item);
+                        }
+                    }, 250);
+                }
+            }, config.visibleDuration);
+        }
+
+        function collectCarrot(holeEl, item) {
+            if (!gameState.isPlaying) return;
+            playSound('carrot');
+            holeEl.removeChild(item);
+
+            gameState.scoreInLevel++;
+            gameState.totalCarrotsCollected++;
+            updateUI();
+
+            pauseGame();
+            showEducationalFact();
+        }
+
+        function hitObstacle(holeEl, item) {
+            if (!gameState.isPlaying) return;
+            playSound('error');
+            holeEl.removeChild(item);
+
+            gameState.lives--;
+            updateUI();
+
+            // Flash effect
+            document.body.classList.add('bg-rose-950');
+            setTimeout(() => document.body.classList.remove('bg-rose-950'), 200);
+
+            if (gameState.lives <= 0) {
+                endGame(false, "У вас закінчилися життя! Будьте обачнішими з перешкодами.");
+            }
+        }
+
+        function collectBonus(holeEl, item) {
+            if (!gameState.isPlaying) return;
+            playSound('bonus');
+            holeEl.removeChild(item);
+
+            gameState.timeLeft += 5; // Add +5 seconds
+            updateUI();
+
+            // Show floating text indicator
+            const floatTxt = document.createElement('div');
+            floatTxt.className = 'absolute font-heading font-bold text-amber-300 text-lg animate-bounce z-10';
+            floatTxt.innerText = '+5 сек!';
+            holeEl.appendChild(floatTxt);
+            setTimeout(() => { if (holeEl.contains(floatTxt)) holeEl.removeChild(floatTxt); }, 1000);
+        }
+
+        function getFactForCurrentLevel() {
+            const available = KNOWLEDGE_BASE.map((item, idx) => ({ ...item, originalIdx: idx }))
+                .filter(item => item.level === gameState.currentLevel && !gameState.usedKnowledgeIndices.has(item.originalIdx));
+
+            if (available.length === 0) {
+                // Fallback if all used
+                const levelItems = KNOWLEDGE_BASE.filter(item => item.level === gameState.currentLevel);
+                return levelItems[Math.floor(Math.random() * levelItems.length)];
+            }
+
+            const chosen = available[Math.floor(Math.random() * available.length)];
+            gameState.usedKnowledgeIndices.add(chosen.originalIdx);
+            return chosen;
+        }
+
+        function showEducationalFact() {
+            const data = getFactForCurrentLevel();
+            gameState.factsUnlocked++;
+
+            const modalHeader = document.getElementById('modalHeader');
+            const modalContent = document.getElementById('modalContent');
+            const factBadge = document.getElementById('factBadge');
+            const actionBtn = document.getElementById('modalActionBtn');
+
+            modalContent.innerHTML = '';
+
+            if (data.type === 'fact') {
+                modalHeader.innerText = data.title || "Краєзнавча Довідка";
+                factBadge.innerText = "Історичний факт";
+                factBadge.className = "bg-amber-500/20 text-amber-300 text-xs px-2.5 py-1 rounded-full font-semibold border border-amber-500/30";
+
+                modalContent.innerHTML = `
+                    <div class="text-center my-3">
+                        <div class="text-5xl mb-3">🏛️</div>
+                        <p class="text-slate-200 text-base sm:text-lg leading-relaxed font-medium">${data.text}</p>
+                    </div>
+                `;
+
+                actionBtn.style.display = 'block';
+                gameState.currentModalCallback = () => {
+                    checkLevelCompletion();
+                };
+            } else if (data.type === 'quiz') {
+                modalHeader.innerText = "Краєзнавча Вікторина";
+                factBadge.innerText = "Питання";
+                factBadge.className = "bg-cyan-500/20 text-cyan-300 text-xs px-2.5 py-1 rounded-full font-semibold border border-cyan-500/30";
+
+                actionBtn.style.display = 'none'; // Hide continue button until answered
+
+                let optionsHTML = '';
+                data.options.forEach((opt, i) => {
+                    optionsHTML += `
+                        <button onclick="handleQuizAnswer(${i}, ${data.correct}, '${data.explanation.replace(/'/g, "\\'")}')" 
+                            class="quiz-opt-btn w-full text-left bg-slate-800 hover:bg-slate-700 border border-slate-600/80 hover:border-amber-400 p-3.5 rounded-xl transition text-slate-200 font-semibold text-sm sm:text-base flex items-center justify-between">
+                            <span>${opt}</span>
+                            <i class="fas fa-chevron-right text-slate-400 text-xs"></i>
+                        </button>
+                    `;
+                });
+
+                modalContent.innerHTML = `
+                    <div class="mb-4">
+                        <p class="text-slate-100 font-bold text-base sm:text-lg mb-4 leading-snug">${data.question}</p>
+                        <div class="space-y-2.5">
+                            ${optionsHTML}
+                        </div>
+                        <div id="quizFeedback" class="mt-4 p-3 rounded-xl hidden text-sm font-semibold"></div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('factModal').classList.remove('hidden');
+        }
+
+        function handleQuizAnswer(selectedIdx, correctIdx, explanation) {
+            const feedbackEl = document.getElementById('quizFeedback');
+            const btns = document.querySelectorAll('.quiz-opt-btn');
+            
+            // Disable all options
+            btns.forEach(btn => btn.onclick = null);
+
+            if (selectedIdx === correctIdx) {
+                playSound('win');
+                btns[selectedIdx].classList.remove('bg-slate-800', 'border-slate-600/80');
+                btns[selectedIdx].classList.add('bg-emerald-900/60', 'border-emerald-500', 'text-emerald-300');
+                
+                feedbackEl.className = 'mt-4 p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs sm:text-sm';
+                feedbackEl.innerHTML = `<i class="fas fa-circle-check mr-1.5 text-base"></i> <strong>Вірно!</strong> ${explanation}`;
+            } else {
+                playSound('error');
+                btns[selectedIdx].classList.remove('bg-slate-800', 'border-slate-600/80');
+                btns[selectedIdx].classList.add('bg-rose-950/60', 'border-rose-500', 'text-rose-300');
+                
+                btns[correctIdx].classList.remove('bg-slate-800');
+                btns[correctIdx].classList.add('bg-emerald-900/40', 'border-emerald-500/50', 'text-emerald-300');
+
+                feedbackEl.className = 'mt-4 p-3 rounded-xl bg-rose-950/80 border border-rose-500/50 text-rose-300 text-xs sm:text-sm';
+                feedbackEl.innerHTML = `<i class="fas fa-circle-xmark mr-1.5 text-base"></i> <strong>Незовсім так!</strong> ${explanation}`;
+            }
+
+            feedbackEl.classList.remove('hidden');
+
+            const actionBtn = document.getElementById('modalActionBtn');
+            actionBtn.style.display = 'block';
+            gameState.currentModalCallback = () => {
+                checkLevelCompletion();
+            };
+        }
+
+        function closeFactModal() {
+            document.getElementById('factModal').classList.add('hidden');
+            if (gameState.currentModalCallback) {
+                const cb = gameState.currentModalCallback;
+                gameState.currentModalCallback = null;
+                cb();
+            } else {
+                resumeGame();
+            }
+        }
+
+        function checkLevelCompletion() {
+            const config = LEVEL_CONFIGS[gameState.currentLevel];
+            
+            if (gameState.scoreInLevel >= config.targetScore) {
+                if (gameState.currentLevel < 5) {
+                    // Advance to next level
+                    playSound('win');
+                    startLevel(gameState.currentLevel + 1);
+                } else {
+                    // Completed all 5 levels - Victory!
+                    endGame(true, "Вітаємо! Ви проявили виняткову ерудицію та швидкість і пробігли всі 5 рівнів експедиції!");
+                }
+            } else {
+                resumeGame();
+            }
+        }
+
+        function handleTimeOut() {
+            pauseGame();
+            playSound('error');
+            endGame(false, "Час вичерпано! Заєць не встиг зібрати достатньо моркви для завершення експедиції.");
+        }
+
+        function endGame(isVictory, message) {
+            pauseGame();
+            if (gameState.activeTimer) clearInterval(gameState.activeTimer);
+            if (gameState.spawnTimer) clearInterval(gameState.spawnTimer);
+
+            const modal = document.getElementById('gameOverModal');
+            const endIcon = document.getElementById('endIcon');
+            const endTitle = document.getElementById('endTitle');
+            const endDesc = document.getElementById('endDesc');
+
+            if (isVictory) {
+                playSound('win');
+                endIcon.innerText = "🏆";
+                endTitle.innerText = "Видатна Перемога!";
+                endTitle.className = "font-heading text-2xl sm:text-3xl text-amber-400 font-bold mb-2";
+            } else {
+                endIcon.innerText = "⌛";
+                endTitle.innerText = "Експедицію завершено";
+                endTitle.className = "font-heading text-2xl sm:text-3xl text-rose-400 font-bold mb-2";
+            }
+
+            endDesc.innerText = message;
+            document.getElementById('finalLevels').innerText = `${gameState.currentLevel} / 5`;
+            document.getElementById('finalScore').innerText = gameState.totalCarrotsCollected;
+            document.getElementById('finalFacts').innerText = gameState.factsUnlocked;
+
+            modal.classList.remove('hidden');
+        }
+
+        function restartGame() {
+            document.getElementById('gameOverModal').classList.add('hidden');
+            startGame();
+        }
+
+        function showRulesModal() {
+            pauseGame();
+            document.getElementById('rulesModal').classList.remove('hidden');
+        }
+
+        function hideRulesModal() {
+            document.getElementById('rulesModal').classList.add('hidden');
+            if (document.getElementById('startOverlay').classList.contains('hidden')) {
+                resumeGame();
+            }
+        }
+
+        // Initialize UI on window load
+        window.onload = function() {
+            initHoles(9);
+            updateUI();
+        };
+    </script>
+</body>
+</html>
